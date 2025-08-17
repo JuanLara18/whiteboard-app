@@ -44,48 +44,55 @@ export interface TextElement {
 
 export type BoardElement = StickyNote | DrawingElement | TextElement;
 
-interface BoardState {
+interface BoardStore {
+  // Board management
   boards: Board[];
-  activeBoard: string | null;
-  selectedElements: string[];
-  currentTool: string;
-  
-  // Board actions
+  currentBoardId: string | null;
   loadBoards: () => Promise<void>;
-  setActiveBoard: (boardId: string) => void;
-  createBoard: (name: string) => Promise<void>;
-  deleteBoard: (boardId: string) => Promise<void>;
-  renameBoard: (boardId: string, newName: string) => Promise<void>;
+  createBoard: (name: string) => void;
+  selectBoard: (id: string) => void;
+  updateBoard: (id: string, updates: Partial<Board>) => void;
+  deleteBoard: (id: string) => void;
+  renameBoard: (id: string, name: string) => void;
   
-  // Element actions
-  addElement: (boardId: string, element: BoardElement) => Promise<void>;
-  updateElement: (boardId: string, element: BoardElement) => Promise<void>;
-  deleteElement: (boardId: string, elementId: string) => Promise<void>;
-  
-  // Selection actions
+  // Element management
+  selectedElements: string[];
   setSelectedElements: (elementIds: string[]) => void;
   clearSelection: () => void;
+  addElement: (boardId: string, element: BoardElement) => void;
+  updateElement: (boardId: string, elementId: string, updates: Partial<BoardElement>) => void;
+  deleteElement: (boardId: string, elementId: string) => void;
+  deleteSelectedElements: (boardId: string) => void;
   
-  // Tool actions
-  setCurrentTool: (tool: string) => void;
+  // Tool state
+  currentTool: 'select' | 'pan' | 'sticky-note';
+  setCurrentTool: (tool: 'select' | 'pan' | 'sticky-note') => void;
+  
+  // Zoom state
+  zoomLevel: number;
+  setZoom: (level: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
 }
 
 export const useBoardStore = (create as any)(
   persist(
-  (set: any, get: () => BoardState) => ({
+  (set: any, get: () => BoardStore) => ({
       boards: [],
-      activeBoard: null,
+      currentBoardId: null,
       selectedElements: [],
       currentTool: 'select',
+      zoomLevel: 1,
       
       loadBoards: async () => {
         try {
           const loadedBoards = await getAllBoards();
           set({ 
             boards: loadedBoards,
-            activeBoard: loadedBoards.length > 0 && !get().activeBoard 
+            currentBoardId: loadedBoards.length > 0 && !get().currentBoardId 
               ? loadedBoards[0].id 
-              : get().activeBoard
+              : get().currentBoardId
           });
         } catch (error) {
           console.error('Error loading boards:', error);
@@ -107,7 +114,7 @@ export const useBoardStore = (create as any)(
         
         try {
           await saveBoard(newBoard);
-          set((state: BoardState) => ({
+          set((state: BoardStore) => ({
             boards: [...state.boards, newBoard],
             activeBoard: newBoard.id,
           }));
@@ -119,13 +126,13 @@ export const useBoardStore = (create as any)(
   deleteBoard: async (boardId: string) => {
         try {
           await deleteFromDB(boardId);
-          set((state: BoardState) => {
+          set((state: BoardStore) => {
             const remainingBoards = state.boards.filter((board: Board) => board.id !== boardId);
             return {
               boards: remainingBoards,
-              activeBoard: state.activeBoard === boardId 
+              currentBoardId: state.currentBoardId === boardId 
                 ? (remainingBoards.length > 0 ? remainingBoards[0].id : null)
-                : state.activeBoard,
+                : state.currentBoardId,
               selectedElements: [],
             };
           });
@@ -135,7 +142,7 @@ export const useBoardStore = (create as any)(
       },
       
       renameBoard: async (boardId: string, newName: string) => {
-        set((state: BoardState) => {
+        set((state: BoardStore) => {
           const updatedBoards = state.boards.map((board: Board) =>
             board.id === boardId
               ? { ...board, name: newName, updatedAt: Date.now() }
@@ -153,7 +160,7 @@ export const useBoardStore = (create as any)(
       },
       
       addElement: async (boardId: string, element: BoardElement) => {
-        set((state: BoardState) => {
+        set((state: BoardStore) => {
           const updatedBoards = state.boards.map((board: Board) =>
             board.id === boardId
               ? {
@@ -175,7 +182,7 @@ export const useBoardStore = (create as any)(
       },
       
       updateElement: async (boardId: string, updatedElement: BoardElement) => {
-        set((state: BoardState) => {
+        set((state: BoardStore) => {
           const updatedBoards = state.boards.map((board: Board) =>
             board.id === boardId
               ? {
@@ -199,7 +206,7 @@ export const useBoardStore = (create as any)(
       },
       
       deleteElement: async (boardId: string, elementId: string) => {
-        set((state: BoardState) => {
+        set((state: BoardStore) => {
           const updatedBoards = state.boards.map((board: Board) =>
             board.id === boardId
               ? {
@@ -234,12 +241,34 @@ export const useBoardStore = (create as any)(
   setCurrentTool: (tool: string) => {
         set({ currentTool: tool, selectedElements: [] });
       },
+      
+      // Zoom functionality
+      setZoom: (level: number) => {
+        const clampedLevel = Math.max(0.1, Math.min(5, level));
+        set({ zoomLevel: clampedLevel });
+      },
+
+      zoomIn: () => {
+        const { zoomLevel, setZoom } = get();
+        setZoom(zoomLevel * 1.2);
+      },
+
+      zoomOut: () => {
+        const { zoomLevel, setZoom } = get();
+        setZoom(zoomLevel / 1.2);
+      },
+
+      resetZoom: () => {
+        set({ zoomLevel: 1 });
+      },
     }),
     {
       name: 'whiteboard-storage',
-  partialize: (state: BoardState) => ({ 
-        activeBoard: state.activeBoard,
-        currentTool: state.currentTool 
+  partialize: (state: BoardStore) => ({ 
+        boards: state.boards,
+        currentBoardId: state.currentBoardId,
+        currentTool: state.currentTool,
+        zoomLevel: state.zoomLevel
       }),
     }
   )

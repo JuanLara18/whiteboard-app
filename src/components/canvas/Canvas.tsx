@@ -1,9 +1,9 @@
 // src/components/canvas/Canvas.tsx
 import { useRef, useState, useEffect, useCallback, Fragment } from 'react';
 import { Stage, Layer } from 'react-konva';
-import { Box } from '@chakra-ui/react';
 import { useBoardStore, Board, BoardElement } from '../../store/boardStore';
 import { StickyNote } from '../notes/StickyNote';
+import { designSystem } from '../../styles/design-system';
 
 interface CanvasProps {
   board: Board;
@@ -41,11 +41,12 @@ export const Canvas = ({ board }: CanvasProps) => {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Handle zoom
+  // Handle zoom with store integration
+  const { setZoom, zoomLevel } = useBoardStore();
+  
   const handleWheel = useCallback((e: any) => {
     e.evt.preventDefault();
     
-    const scaleBy = 1.1;
     const stage = stageRef.current;
     if (!stage) return;
     
@@ -59,15 +60,22 @@ export const Canvas = ({ board }: CanvasProps) => {
       y: (pointerPosition.y - position.y) / oldScale,
     };
     
-    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    const clampedScale = Math.max(0.1, Math.min(5, newScale));
+    // Use zoom level from store
+    const newZoom = e.evt.deltaY < 0 ? zoomLevel * 1.1 : zoomLevel / 1.1;
+    const clampedZoom = Math.max(0.1, Math.min(5, newZoom));
     
-    setScale(clampedScale);
+    setZoom(clampedZoom);
+    setScale(clampedZoom);
     setPosition({
-      x: pointerPosition.x - mousePointTo.x * clampedScale,
-      y: pointerPosition.y - mousePointTo.y * clampedScale,
+      x: pointerPosition.x - mousePointTo.x * clampedZoom,
+      y: pointerPosition.y - mousePointTo.y * clampedZoom,
     });
-  }, [scale, position]);
+  }, [scale, position, zoomLevel, setZoom]);
+
+  // Update scale when zoom level changes from toolbar
+  useEffect(() => {
+    setScale(zoomLevel);
+  }, [zoomLevel]);
 
   // Handle stage drag
   const handleStageDragEnd = useCallback((e: any) => {
@@ -82,6 +90,14 @@ export const Canvas = ({ board }: CanvasProps) => {
         // Create a new sticky note
         const pointerPosition = e.target.getStage().getPointerPosition();
         if (pointerPosition) {
+          const colors = [
+            designSystem.colors.accent.yellow,
+            designSystem.colors.accent.pink,
+            designSystem.colors.accent.green,
+            designSystem.colors.accent.blue,
+          ];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+          
           const newStickyNote: BoardElement = {
             id: `sticky_${Date.now()}`,
             type: 'sticky-note',
@@ -91,7 +107,7 @@ export const Canvas = ({ board }: CanvasProps) => {
               y: (pointerPosition.y - position.y) / scale,
             },
             size: { width: 200, height: 150 },
-            color: '#FBBF24', // yellow
+            color: randomColor,
             zIndex: Date.now(),
           };
           addElement(board.id, newStickyNote);
@@ -104,9 +120,19 @@ export const Canvas = ({ board }: CanvasProps) => {
 
   // Filter elements by type for rendering
   const stickyNotes = board.elements.filter(el => el.type === 'sticky-note') as any[];
+
+  const canvasContainerStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'white',
+    borderRadius: designSystem.borderRadius.md,
+    boxShadow: designSystem.shadows.sm,
+    overflow: 'hidden',
+    position: 'relative',
+  };
   
   return (
-    <Box w="100%" h="100%" bg="white" overflow="hidden">
+    <div style={canvasContainerStyle} className="canvas-container">
       <Stage
         ref={stageRef}
         width={stageSize.width}
@@ -139,6 +165,6 @@ export const Canvas = ({ board }: CanvasProps) => {
           ))}
         </Layer>
       </Stage>
-    </Box>
+    </div>
   );
 };

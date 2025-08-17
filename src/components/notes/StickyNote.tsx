@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Group, Rect, Text, Transformer } from 'react-konva';
 import { useBoardStore, StickyNote as StickyNoteType } from '../../store/boardStore';
+import { designSystem } from '../../styles/design-system';
 
 interface StickyNoteProps {
   note: StickyNoteType;
@@ -10,7 +11,7 @@ interface StickyNoteProps {
 }
 
 export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
-  const { updateElement, activeBoard } = useBoardStore();
+  const { updateElement, currentBoardId } = useBoardStore();
   const shapeRef = useRef(null as any);
   const transformerRef = useRef(null as any);
   const textRef = useRef(null as any);
@@ -26,10 +27,9 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
   }, [isSelected]);
 
   const handleDragEnd = (e: any) => {
-    if (!activeBoard) return;
+    if (!currentBoardId) return;
     
-    updateElement(activeBoard, {
-      ...note,
+    updateElement(currentBoardId, note.id, {
       position: {
         x: e.target.x(),
         y: e.target.y(),
@@ -38,7 +38,7 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
   };
 
   const handleTransformEnd = () => {
-    if (!activeBoard || !shapeRef.current) return;
+    if (!currentBoardId || !shapeRef.current) return;
     
     const node = shapeRef.current;
     const scaleX = node.scaleX();
@@ -48,8 +48,7 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
     node.scaleX(1);
     node.scaleY(1);
     
-    updateElement(activeBoard, {
-      ...note,
+    updateElement(currentBoardId, note.id, {
       position: {
         x: node.x(),
         y: node.y(),
@@ -66,7 +65,7 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
   };
 
   const handleTextEdit = () => {
-    if (!activeBoard) return;
+    if (!currentBoardId) return;
     
     // Create a temporary textarea for editing
     const textPosition = textRef.current?.absolutePosition();
@@ -79,22 +78,12 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
     document.body.appendChild(textarea);
 
     textarea.value = note.content;
+    textarea.className = 'sticky-note-editor';
     textarea.style.position = 'absolute';
     textarea.style.top = (stageBox.top + textPosition.y) + 'px';
     textarea.style.left = (stageBox.left + textPosition.x) + 'px';
     textarea.style.width = note.size.width - 20 + 'px';
     textarea.style.height = note.size.height - 20 + 'px';
-    textarea.style.fontSize = '14px';
-    textarea.style.border = '2px solid #3182ce';
-    textarea.style.borderRadius = '4px';
-    textarea.style.padding = '8px';
-    textarea.style.margin = '0px';
-    textarea.style.overflow = 'hidden';
-    textarea.style.background = 'white';
-    textarea.style.outline = 'none';
-    textarea.style.resize = 'none';
-    textarea.style.lineHeight = '1.2';
-    textarea.style.fontFamily = 'Arial, sans-serif';
     textarea.style.zIndex = '1000';
 
     textarea.focus();
@@ -106,8 +95,7 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
       setEditing(false);
       
       if (newContent !== note.content) {
-        updateElement(activeBoard, {
-          ...note,
+        updateElement(currentBoardId, note.id, {
           content: newContent,
         });
       }
@@ -150,30 +138,30 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
           width={note.size.width}
           height={note.size.height}
           fill={note.color}
-          stroke={isSelected ? '#3182ce' : 'transparent'}
+          stroke={isSelected ? designSystem.colors.primary[500] : 'transparent'}
           strokeWidth={isSelected ? 2 : 0}
-          shadowColor="rgba(0,0,0,0.3)"
-          shadowBlur={8}
+          shadowColor="rgba(0,0,0,0.15)"
+          shadowBlur={6}
           shadowOffset={{ x: 2, y: 2 }}
-          shadowOpacity={0.3}
-          cornerRadius={8}
+          shadowOpacity={0.2}
+          cornerRadius={parseInt(designSystem.borderRadius.md)}
         />
         
         {/* Note text */}
         <Text
           ref={textRef}
-          x={10}
-          y={10}
-          width={note.size.width - 20}
-          height={note.size.height - 20}
+          x={12}
+          y={12}
+          width={note.size.width - 24}
+          height={note.size.height - 24}
           text={note.content}
-          fontSize={14}
-          fontFamily="Arial, sans-serif"
-          fill="#333"
+          fontSize={parseInt(designSystem.typography.sizes.sm)}
+          fontFamily={designSystem.typography.fonts.sans}
+          fill={designSystem.colors.gray[800]}
           align="left"
           verticalAlign="top"
           wrap="word"
-          lineHeight={1.2}
+          lineHeight={designSystem.typography.lineHeights.relaxed}
         />
       </Group>
       
@@ -183,9 +171,9 @@ export const StickyNote = ({ note, isSelected, onSelect }: StickyNoteProps) => {
           ref={transformerRef}
           flipEnabled={false}
           rotateEnabled={false}
-          borderStroke="#3182ce"
+          borderStroke={designSystem.colors.primary[500]}
           borderStrokeWidth={2}
-          anchorStroke="#3182ce"
+          anchorStroke={designSystem.colors.primary[500]}
           anchorStrokeWidth={2}
           anchorFill="white"
           anchorSize={8}

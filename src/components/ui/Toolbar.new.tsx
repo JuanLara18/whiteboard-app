@@ -7,18 +7,14 @@ export const Toolbar = () => {
   const { 
     currentTool, 
     setCurrentTool, 
-    currentBoardId, 
+    activeBoard, 
     boards, 
     selectedElements,
     deleteElement,
-    clearSelection,
-    zoomLevel,
-    zoomIn,
-    zoomOut,
-    resetZoom
+    clearSelection
   } = useBoardStore();
   
-  const activeBoardData = boards.find((board: any) => board.id === currentBoardId);
+  const activeBoardData = boards.find((board: any) => board.id === activeBoard);
   
   const tools = [
     { id: 'select', label: 'Select' },
@@ -28,10 +24,10 @@ export const Toolbar = () => {
   ];
 
   const handleDeleteSelected = () => {
-    if (!currentBoardId) return;
+    if (!activeBoard) return;
     
     selectedElements.forEach((elementId: string) => {
-      deleteElement(currentBoardId, elementId);
+      deleteElement(activeBoard, elementId);
     });
     clearSelection();
   };
@@ -84,7 +80,23 @@ export const Toolbar = () => {
             Delete ({selectedElements.length})
           </StyledButton>
 
+          <StyledButton
+            variant="ghost"
+            size="sm"
+            title="Zoom in"
+            onClick={() => console.log('Zoom in')}
+          >
+            Zoom +
+          </StyledButton>
 
+          <StyledButton
+            variant="ghost"
+            size="sm"
+            title="Zoom out"
+            onClick={() => console.log('Zoom out')}
+          >
+            Zoom −
+          </StyledButton>
         </div>
       </div>
 
@@ -106,41 +118,6 @@ export const Toolbar = () => {
             {selectedElements.length} selected
           </StyledBadge>
         )}
-      </div>
-
-      {/* Zoom Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
-        <StyledButton
-          variant="secondary"
-          size="sm"
-          onClick={zoomOut}
-        >
-          Zoom Out
-        </StyledButton>
-        
-        <StyledText 
-          size="sm" 
-          color={colors.gray[700]} 
-          style={{ minWidth: '60px', textAlign: 'center' }}
-        >
-          {Math.round(zoomLevel * 100)}%
-        </StyledText>
-        
-        <StyledButton
-          variant="secondary"
-          size="sm"
-          onClick={zoomIn}
-        >
-          Zoom In
-        </StyledButton>
-        
-        <StyledButton
-          variant="ghost"
-          size="sm"
-          onClick={resetZoom}
-        >
-          Reset
-        </StyledButton>
       </div>
 
       {/* Right side - Status */}
