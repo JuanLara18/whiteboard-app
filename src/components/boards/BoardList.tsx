@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, MouseEvent } from 'react';
 import { colors, spacing, layout } from '../../styles/design-system';
 import { StyledButton, StyledInput, StyledCard, StyledModal, StyledText, StyledBadge } from '../ui/StyledComponents';
-import { useBoardStore, BoardTemplate } from '../../store/boardStore';
+import { useBoardStore } from '../../store/boardStore';
 import { BOARD_TEMPLATES } from '../../constants/boardTemplates';
 import { TemplatePreview } from './TemplatePreview';
 

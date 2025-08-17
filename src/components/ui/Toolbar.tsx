@@ -1,5 +1,6 @@
 // src/components/ui/Toolbar.tsx
 import { useBoardStore } from '../../store/boardStore';
+import type { ChangeEvent } from 'react';
 import { colors, spacing, shadows, layout } from '../../styles/design-system';
 import { StyledButton, StyledBadge, StyledText } from './StyledComponents';
 
@@ -15,7 +16,11 @@ export const Toolbar = () => {
     zoomLevel,
     zoomIn,
     zoomOut,
-    resetZoom
+  resetZoom,
+  penColor,
+  penWidth,
+  setPenColor,
+  setPenWidth,
   } = useBoardStore();
   
   const activeBoardData = boards.find((board: any) => board.id === currentBoardId);
@@ -141,6 +146,28 @@ export const Toolbar = () => {
         >
           Reset
         </StyledButton>
+      </div>
+
+      {/* Pen settings */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
+        <StyledText size="xs" color={colors.gray[600]}>Pen</StyledText>
+        <input
+          type="color"
+          value={penColor}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setPenColor(e.target.value)}
+          title="Pen color"
+          style={{ width: 28, height: 24, border: `1px solid ${colors.gray[300]}`, borderRadius: 6, padding: 0, background: 'transparent' }}
+        />
+        <StyledText size="xs" color={colors.gray[600]}>Width</StyledText>
+        <input
+          type="range"
+          min={1}
+          max={12}
+          value={penWidth}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setPenWidth(parseInt(e.target.value))}
+          title="Pen width"
+        />
+        <StyledText size="xs" color={colors.gray[700]} style={{ minWidth: 28, textAlign: 'right' }}>{penWidth}px</StyledText>
       </div>
 
       {/* Right side - Status */}

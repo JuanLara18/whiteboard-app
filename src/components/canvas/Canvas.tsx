@@ -1,6 +1,6 @@
 // src/components/canvas/Canvas.tsx
 import { useRef, useState, useEffect, useCallback, Fragment } from 'react';
-import { Stage, Layer } from 'react-konva';
+import { Stage, Layer, Line } from 'react-konva';
 import { useBoardStore, Board, BoardElement } from '../../store/boardStore';
 import { StickyNote } from '../notes/StickyNote';
 import { designSystem } from '../../styles/design-system';
@@ -12,34 +12,44 @@ interface CanvasProps {
 
 export const Canvas = ({ board }: CanvasProps) => {
   const stageRef = useRef(null as any);
+  const containerRef = useRef(null as any);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentPoints, setCurrentPoints] = useState([] as number[]);
   
   const { 
     selectedElements, 
     setSelectedElements, 
     clearSelection, 
     currentTool,
-    addElement 
+  addElement,
+  penColor,
+  penWidth,
   } = useBoardStore();
 
-  // Update stage size on window resize
+  // Update stage size based on wrapper container
   useEffect(() => {
-    const updateSize = () => {
-      const container = stageRef.current?.container();
-      if (container) {
-        const containerRect = container.getBoundingClientRect();
-        setStageSize({
-          width: containerRect.width,
-          height: containerRect.height,
-        });
-      }
+    const el = containerRef.current;
+    if (!el) return;
+    const setFromRect = () => {
+      const rect = el.getBoundingClientRect();
+      setStageSize({ width: Math.max(0, rect.width), height: Math.max(0, rect.height) });
     };
-
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    setFromRect();
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(setFromRect);
+      ro.observe(el);
+    } else {
+      // Fallback
+      window.addEventListener('resize', setFromRect);
+    }
+    return () => {
+      if (ro) ro.disconnect();
+      else window.removeEventListener('resize', setFromRect);
+    };
   }, []);
 
   // Handle zoom with store integration
@@ -87,6 +97,8 @@ export const Canvas = ({ board }: CanvasProps) => {
   const handleStageClick = useCallback((e: any) => {
     // If clicking on stage (not on an element)
     if (e.target === e.target.getStage()) {
+      // When pen tool is active, clicks are part of drawing; don't create notes or clear selection
+      if (currentTool === 'pen') return;
       if (currentTool === 'sticky-note') {
         // Create a new sticky note
         const pointerPosition = e.target.getStage().getPointerPosition();
@@ -121,6 +133,52 @@ export const Canvas = ({ board }: CanvasProps) => {
 
   // Filter elements by type for rendering
   const stickyNotes = board.elements.filter(el => el.type === 'sticky-note') as any[];
+  const drawings = board.elements.filter(el => el.type === 'drawing') as any[];
+
+  // Drawing handlers for Pen tool
+  const toCanvasPoint = (pos: {x:number;y:number}) => ({
+    x: (pos.x - position.x) / scale,
+    y: (pos.y - position.y) / scale,
+  });
+
+  const handleMouseDown = useCallback(() => {
+    if (currentTool !== 'pen') return;
+    const stage = stageRef.current;
+    const pointerPosition = stage?.getPointerPosition();
+    if (!pointerPosition) return;
+    const p = toCanvasPoint(pointerPosition);
+    setIsDrawing(true);
+    setCurrentPoints([p.x, p.y]);
+  }, [currentTool, position, scale]);
+
+  const handleMouseMove = useCallback(() => {
+    if (!isDrawing || currentTool !== 'pen') return;
+    const stage = stageRef.current;
+    const pointerPosition = stage?.getPointerPosition();
+    if (!pointerPosition) return;
+    const p = toCanvasPoint(pointerPosition);
+    setCurrentPoints((prev: number[]) => [...prev, p.x, p.y]);
+  }, [isDrawing, currentTool, position, scale]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDrawing || currentTool !== 'pen') return;
+    setIsDrawing(false);
+    if (currentPoints.length < 4) { // too short
+      setCurrentPoints([]);
+      return;
+    }
+    const newDrawing: BoardElement = {
+      id: `draw_${Date.now()}`,
+      type: 'drawing',
+      tool: 'pen',
+      points: currentPoints,
+      strokeWidth: penWidth,
+      stroke: penColor,
+      zIndex: Date.now(),
+    } as any;
+    addElement(board.id, newDrawing);
+    setCurrentPoints([]);
+  }, [isDrawing, currentTool, currentPoints, addElement, board.id, penColor, penWidth]);
 
   const canvasContainerStyle: React.CSSProperties = {
     width: '100%',
@@ -133,19 +191,25 @@ export const Canvas = ({ board }: CanvasProps) => {
   };
   
   return (
-    <div style={canvasContainerStyle} className="canvas-container">
+    <div ref={containerRef} style={canvasContainerStyle} className="canvas-container">
       <Stage
         ref={stageRef}
         width={stageSize.width}
         height={stageSize.height}
         onWheel={handleWheel}
-        draggable={currentTool === 'select' || currentTool === 'pan'}
+  draggable={(currentTool === 'select' || currentTool === 'pan') && !isDrawing}
         onDragEnd={handleStageDragEnd}
         onClick={handleStageClick}
         scaleX={scale}
         scaleY={scale}
         x={position.x}
         y={position.y}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleMouseDown}
+        onTouchMove={handleMouseMove}
+        onTouchEnd={handleMouseUp}
       >
         <Layer>
           {/* Background layer */}
@@ -154,6 +218,31 @@ export const Canvas = ({ board }: CanvasProps) => {
             width={stageSize.width / scale}
             height={stageSize.height / scale}
           />
+          {/* Existing drawings */}
+          {drawings.map((d) => (
+            <Line
+              key={d.id}
+              points={d.points}
+              stroke={d.stroke}
+              strokeWidth={d.strokeWidth}
+              tension={0.4}
+              lineCap="round"
+              lineJoin="round"
+              bezier={false}
+            />
+          ))}
+          {/* Live drawing preview */}
+      {isDrawing && currentTool === 'pen' && currentPoints.length >= 2 && (
+            <Line
+              points={currentPoints}
+        stroke={penColor}
+        strokeWidth={penWidth}
+              tension={0.4}
+              lineCap="round"
+              lineJoin="round"
+              bezier={false}
+            />
+          )}
           {/* Render sticky notes */}
           {stickyNotes.map((note) => (
             <Fragment key={note.id}>

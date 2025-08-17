@@ -1,4 +1,4 @@
-import React from 'react';
+// React import not required due to automatic JSX runtime
 import { colors, components, spacing, typography, borderRadius, transitions } from '../../styles/design-system';
 
 // Styled Button Component
@@ -6,7 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   isLoading?: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   key?: string;
 }
 
@@ -118,7 +118,7 @@ export const StyledInput: React.FC<InputProps> = ({
 
 // Styled Card Component
 interface CardProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   hover?: boolean;
   interactive?: boolean;
   style?: React.CSSProperties;
@@ -173,7 +173,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   footer?: React.ReactNode;
 }
 
@@ -234,7 +234,7 @@ export const StyledModal: React.FC<ModalProps> = ({
 
 // Badge Component
 interface BadgeProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   variant?: 'default' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md';
 }
@@ -294,7 +294,7 @@ export const StyledBadge: React.FC<BadgeProps> = ({
 
 // Typography Components
 interface TextProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span';
   size?: keyof typeof typography.sizes;
   weight?: keyof typeof typography.weights;

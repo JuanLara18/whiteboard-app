@@ -66,6 +66,7 @@ declare module 'react-dnd-html5-backend' {
 declare module 'react-konva' {
   export const Stage: any;
   export const Layer: any;
+  export const Line: any;
   export const Group: any;
   export const Rect: any;
   export const Text: any;

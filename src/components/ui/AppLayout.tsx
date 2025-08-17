@@ -8,13 +8,13 @@ import { Canvas } from '../canvas/Canvas';
 import { useBoardStore } from '../../store/boardStore';
 
 export const AppLayout = () => {
-  const { boards, activeBoard, loadBoards } = useBoardStore();
+  const { boards, currentBoardId, loadBoards } = useBoardStore();
   
   useEffect(() => {
     loadBoards();
   }, [loadBoards]);
 
-  const currentBoard = boards.find((board: any) => board.id === activeBoard);
+  const currentBoard = boards.find((board: any) => board.id === currentBoardId);
 
   const mainLayoutStyle = {
     display: 'flex',

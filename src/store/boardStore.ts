@@ -74,13 +74,17 @@ interface BoardStore {
   setSelectedElements: (elementIds: string[]) => void;
   clearSelection: () => void;
   addElement: (boardId: string, element: BoardElement) => void;
-  updateElement: (boardId: string, elementId: string, updates: Partial<BoardElement>) => void;
+  updateElement: (
+    boardId: string,
+    element: BoardElement | string,
+    updates?: Partial<BoardElement>
+  ) => void;
   deleteElement: (boardId: string, elementId: string) => void;
   deleteSelectedElements: (boardId: string) => void;
   
   // Tool state
-  currentTool: 'select' | 'pan' | 'sticky-note';
-  setCurrentTool: (tool: 'select' | 'pan' | 'sticky-note') => void;
+  currentTool: 'select' | 'pan' | 'sticky-note' | 'pen';
+  setCurrentTool: (tool: 'select' | 'pan' | 'sticky-note' | 'pen') => void;
   
   // Zoom state
   zoomLevel: number;
@@ -88,6 +92,12 @@ interface BoardStore {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
+
+  // Drawing settings
+  penColor: string;
+  penWidth: number;
+  setPenColor: (color: string) => void;
+  setPenWidth: (width: number) => void;
 }
 
 export const useBoardStore = (create as any)(
@@ -98,6 +108,8 @@ export const useBoardStore = (create as any)(
       selectedElements: [],
       currentTool: 'select',
       zoomLevel: 1,
+  penColor: '#111827', // gray[900]
+  penWidth: 2,
       
       loadBoards: async () => {
         try {
@@ -113,11 +125,11 @@ export const useBoardStore = (create as any)(
         }
       },
       
-  setActiveBoard: (boardId: string) => {
-        set({ activeBoard: boardId, selectedElements: [] });
+      selectBoard: (boardId: string) => {
+        set({ currentBoardId: boardId, selectedElements: [] });
       },
       
-  createBoard: async (name: string, template?: BoardTemplate) => {
+      createBoard: async (name: string, template?: BoardTemplate) => {
         const newBoard: Board = {
           id: `board_${Date.now()}`,
           name,
@@ -131,7 +143,7 @@ export const useBoardStore = (create as any)(
           await saveBoard(newBoard);
           set((state: BoardStore) => ({
             boards: [...state.boards, newBoard],
-            activeBoard: newBoard.id,
+            currentBoardId: newBoard.id,
           }));
         } catch (error) {
           console.error('Error creating board:', error);
@@ -196,15 +208,21 @@ export const useBoardStore = (create as any)(
         });
       },
       
-      updateElement: async (boardId: string, updatedElement: BoardElement) => {
+      updateElement: async (boardId: string, element: BoardElement | string, updates?: Partial<BoardElement>) => {
         set((state: BoardStore) => {
+          const isPartial = typeof element === 'string';
+          const elementId = isPartial ? element : (element as BoardElement).id;
           const updatedBoards = state.boards.map((board: Board) =>
             board.id === boardId
               ? {
                   ...board,
-                  elements: board.elements.map((element: BoardElement) =>
-                    element.id === updatedElement.id ? updatedElement : element
-                  ),
+                  elements: board.elements.map((el: BoardElement) => {
+                    if (el.id !== elementId) return el;
+                    if (isPartial) {
+                      return { ...el, ...(updates as Partial<BoardElement>) } as BoardElement;
+                    }
+                    return element as BoardElement;
+                  }),
                   updatedAt: Date.now(),
                 }
               : board
@@ -276,6 +294,10 @@ export const useBoardStore = (create as any)(
       resetZoom: () => {
         set({ zoomLevel: 1 });
       },
+
+      // Drawing settings actions
+      setPenColor: (color: string) => set({ penColor: color }),
+      setPenWidth: (width: number) => set({ penWidth: Math.max(1, Math.min(20, width)) }),
     }),
     {
       name: 'whiteboard-storage',
@@ -283,7 +305,9 @@ export const useBoardStore = (create as any)(
         boards: state.boards,
         currentBoardId: state.currentBoardId,
         currentTool: state.currentTool,
-        zoomLevel: state.zoomLevel
+        zoomLevel: state.zoomLevel,
+        penColor: state.penColor,
+        penWidth: state.penWidth,
       }),
     }
   )
