@@ -1,5 +1,5 @@
 // src/components/canvas/CanvasBackground.tsx
-import { Rect } from 'react-konva';
+import { Rect, Group, Line } from 'react-konva';
 import { BoardTemplate } from '../../store/boardStore';
 
 interface CanvasBackgroundProps {
@@ -25,52 +25,70 @@ export const CanvasBackground = ({
             width={width}
             height={height}
             fill={background.color}
+            listening={false}
           />
         );
         
       case 'grid':
         return (
-          <>
-            {/* Base background */}
-            <Rect
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              fill={background.color}
-            />
-            {/* Grid lines will be rendered via CSS pattern */}
-          </>
+          <Group>
+            <Rect x={0} y={0} width={width} height={height} fill={background.color} listening={false} />
+            {(() => {
+              const lines: any[] = [];
+              const step = background.gridSize || 20;
+              const color = background.gridColor || '#e5e7eb';
+              // Vertical lines
+              for (let x = 0; x <= width; x += step) {
+                lines.push(
+                  <Line key={`v-${x}`} points={[x, 0, x, height]} stroke={color} strokeWidth={1} listening={false} />
+                );
+              }
+              // Horizontal lines
+              for (let y = 0; y <= height; y += step) {
+                lines.push(
+                  <Line key={`h-${y}`} points={[0, y, width, y]} stroke={color} strokeWidth={1} listening={false} />
+                );
+              }
+              return lines;
+            })()}
+          </Group>
         );
         
       case 'dots':
         return (
-          <>
-            {/* Base background */}
-            <Rect
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              fill={background.color}
-            />
-            {/* Dots will be rendered via CSS pattern */}
-          </>
+          <Group>
+            <Rect x={0} y={0} width={width} height={height} fill={background.color} listening={false} />
+            {(() => {
+              const dots: any[] = [];
+              const step = background.gridSize || 20;
+              const color = background.gridColor || '#e5e7eb';
+              const r = 1;
+              for (let y = 0; y <= height; y += step) {
+                for (let x = 0; x <= width; x += step) {
+                  dots.push(<Rect key={`${x}-${y}`} x={x - r} y={y - r} width={r * 2} height={r * 2} fill={color} listening={false} />);
+                }
+              }
+              return dots;
+            })()}
+          </Group>
         );
         
       case 'lines':
         return (
-          <>
-            {/* Base background */}
-            <Rect
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              fill={background.color}
-            />
-            {/* Lines will be rendered via CSS pattern */}
-          </>
+          <Group>
+            <Rect x={0} y={0} width={width} height={height} fill={background.color} listening={false} />
+            {(() => {
+              const lines: any[] = [];
+              const step = background.gridSize || 20;
+              const color = background.gridColor || '#e5e7eb';
+              for (let y = 0; y <= height; y += step) {
+                lines.push(
+                  <Line key={`hl-${y}`} points={[0, y, width, y]} stroke={color} strokeWidth={1} listening={false} />
+                );
+              }
+              return lines;
+            })()}
+          </Group>
         );
         
       default:
@@ -81,6 +99,7 @@ export const CanvasBackground = ({
             width={width}
             height={height}
             fill="#ffffff"
+            listening={false}
           />
         );
     }
@@ -92,43 +111,6 @@ export const CanvasBackground = ({
 // Helper function to generate CSS background patterns
 export const getCanvasBackgroundStyle = (template: BoardTemplate): React.CSSProperties => {
   const { background } = template;
-  const gridSize = background.gridSize || 20;
-  const gridColor = background.gridColor || '#e5e7eb';
-  const opacity = background.opacity || 1;
-  
-  switch (background.type) {
-    case 'grid':
-      return {
-        backgroundColor: background.color,
-        backgroundImage: `
-          linear-gradient(${gridColor} 1px, transparent 1px),
-          linear-gradient(90deg, ${gridColor} 1px, transparent 1px)
-        `,
-        backgroundSize: `${gridSize}px ${gridSize}px`,
-        opacity,
-      };
-      
-    case 'dots':
-      return {
-        backgroundColor: background.color,
-        backgroundImage: `radial-gradient(circle, ${gridColor} 1px, transparent 1px)`,
-        backgroundSize: `${gridSize}px ${gridSize}px`,
-        opacity,
-      };
-      
-    case 'lines':
-      return {
-        backgroundColor: background.color,
-        backgroundImage: `linear-gradient(${gridColor} 1px, transparent 1px)`,
-        backgroundSize: `${gridSize}px ${gridSize}px`,
-        opacity,
-      };
-      
-    case 'solid':
-    default:
-      return {
-        backgroundColor: background.color,
-        opacity,
-      };
-  }
+  // Keep container background color only; patterns are drawn in Konva to move with pan/zoom
+  return { backgroundColor: background.color };
 };

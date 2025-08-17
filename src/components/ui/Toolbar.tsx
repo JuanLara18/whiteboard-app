@@ -21,6 +21,10 @@ export const Toolbar = () => {
   penWidth,
   setPenColor,
   setPenWidth,
+  smoothing,
+  setSmoothing,
+  simplify,
+  setSimplify,
   } = useBoardStore();
   
   const activeBoardData = boards.find((board: any) => board.id === currentBoardId);
@@ -168,6 +172,28 @@ export const Toolbar = () => {
           title="Pen width"
         />
         <StyledText size="xs" color={colors.gray[700]} style={{ minWidth: 28, textAlign: 'right' }}>{penWidth}px</StyledText>
+
+        <div style={{ width: 1, height: 24, background: colors.gray[300], margin: `0 ${spacing[1]}` }} />
+
+        <StyledText size="xs" color={colors.gray[600]}>Smoothing</StyledText>
+        <input
+          type="range"
+          min={1}
+          max={15}
+          value={smoothing}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setSmoothing(parseInt(e.target.value))}
+          title="Smoothing"
+        />
+        <StyledText size="xs" color={colors.gray[700]} style={{ minWidth: 22, textAlign: 'right' }}>{smoothing}</StyledText>
+
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: spacing[1] }}>
+          <input
+            type="checkbox"
+            checked={simplify}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setSimplify(e.target.checked)}
+          />
+          <StyledText as="span" size="xs" color={colors.gray[600]}>Simplify</StyledText>
+        </label>
       </div>
 
       {/* Right side - Status */}

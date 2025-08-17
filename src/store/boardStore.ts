@@ -98,6 +98,10 @@ interface BoardStore {
   penWidth: number;
   setPenColor: (color: string) => void;
   setPenWidth: (width: number) => void;
+  smoothing: number; // moving average window
+  simplify: boolean; // apply RDP simplification
+  setSmoothing: (n: number) => void;
+  setSimplify: (v: boolean) => void;
 }
 
 export const useBoardStore = (create as any)(
@@ -110,6 +114,8 @@ export const useBoardStore = (create as any)(
       zoomLevel: 1,
   penColor: '#111827', // gray[900]
   penWidth: 2,
+  smoothing: 3,
+  simplify: true,
       
       loadBoards: async () => {
         try {
@@ -298,6 +304,8 @@ export const useBoardStore = (create as any)(
       // Drawing settings actions
       setPenColor: (color: string) => set({ penColor: color }),
       setPenWidth: (width: number) => set({ penWidth: Math.max(1, Math.min(20, width)) }),
+      setSmoothing: (n: number) => set({ smoothing: Math.max(1, Math.min(15, Math.round(n))) }),
+      setSimplify: (v: boolean) => set({ simplify: v }),
     }),
     {
       name: 'whiteboard-storage',
@@ -308,6 +316,8 @@ export const useBoardStore = (create as any)(
         zoomLevel: state.zoomLevel,
         penColor: state.penColor,
         penWidth: state.penWidth,
+        smoothing: state.smoothing,
+        simplify: state.simplify,
       }),
     }
   )

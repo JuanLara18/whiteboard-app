@@ -5,6 +5,7 @@ import { useBoardStore, Board, BoardElement } from '../../store/boardStore';
 import { StickyNote } from '../notes/StickyNote';
 import { designSystem } from '../../styles/design-system';
 import { CanvasBackground, getCanvasBackgroundStyle } from './CanvasBackground';
+import { simplifyRDP, smoothMovingAverage } from '../../utils/path';
 
 interface CanvasProps {
   board: Board;
@@ -27,6 +28,8 @@ export const Canvas = ({ board }: CanvasProps) => {
   addElement,
   penColor,
   penWidth,
+  smoothing,
+  simplify,
   } = useBoardStore();
 
   // Update stage size based on wrapper container
@@ -167,18 +170,22 @@ export const Canvas = ({ board }: CanvasProps) => {
       setCurrentPoints([]);
       return;
     }
+    // Apply smoothing and optional simplification
+    const smoothed = smoothing > 1 ? smoothMovingAverage(currentPoints, smoothing) : currentPoints;
+    const finalPoints = simplify ? simplifyRDP(smoothed, Math.max(1, Math.round(penWidth))) : smoothed;
+
     const newDrawing: BoardElement = {
       id: `draw_${Date.now()}`,
       type: 'drawing',
       tool: 'pen',
-      points: currentPoints,
+      points: finalPoints,
       strokeWidth: penWidth,
       stroke: penColor,
       zIndex: Date.now(),
     } as any;
     addElement(board.id, newDrawing);
     setCurrentPoints([]);
-  }, [isDrawing, currentTool, currentPoints, addElement, board.id, penColor, penWidth]);
+  }, [isDrawing, currentTool, currentPoints, addElement, board.id, penColor, penWidth, smoothing, simplify]);
 
   const canvasContainerStyle: React.CSSProperties = {
     width: '100%',
@@ -191,7 +198,7 @@ export const Canvas = ({ board }: CanvasProps) => {
   };
   
   return (
-    <div ref={containerRef} style={canvasContainerStyle} className="canvas-container">
+  <div ref={containerRef} style={{ ...canvasContainerStyle, cursor: currentTool === 'pen' ? 'crosshair' : 'default' }} className="canvas-container">
       <Stage
         ref={stageRef}
         width={stageSize.width}
@@ -234,7 +241,7 @@ export const Canvas = ({ board }: CanvasProps) => {
           {/* Live drawing preview */}
       {isDrawing && currentTool === 'pen' && currentPoints.length >= 2 && (
             <Line
-              points={currentPoints}
+        points={smoothing > 1 ? smoothMovingAverage(currentPoints, smoothing) : currentPoints}
         stroke={penColor}
         strokeWidth={penWidth}
               tension={0.4}
