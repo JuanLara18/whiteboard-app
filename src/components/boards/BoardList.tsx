@@ -3,19 +3,22 @@ import { useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, MouseEvent } from 'react';
 import { colors, spacing, layout } from '../../styles/design-system';
 import { StyledButton, StyledInput, StyledCard, StyledModal, StyledText, StyledBadge } from '../ui/StyledComponents';
-import { useBoardStore } from '../../store/boardStore';
+import { useBoardStore, BoardTemplate } from '../../store/boardStore';
+import { BOARD_TEMPLATES } from '../../constants/boardTemplates';
+import { TemplatePreview } from './TemplatePreview';
 
 export const BoardList = () => {
   const { 
     boards, 
-    activeBoard, 
-    setActiveBoard, 
+    currentBoardId, 
+    selectBoard, 
     createBoard, 
     deleteBoard, 
     renameBoard 
   } = useBoardStore();
   
   const [newBoardName, setNewBoardName] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(BOARD_TEMPLATES[0]);
   const [editingBoard, setEditingBoard] = useState(null as { id: string; name: string } | null);
   const [deletingBoard, setDeletingBoard] = useState(null as string | null);
   
@@ -25,8 +28,9 @@ export const BoardList = () => {
 
   const handleCreateBoard = async () => {
     if (newBoardName.trim()) {
-      await createBoard(newBoardName.trim());
+      await createBoard(newBoardName.trim(), selectedTemplate);
       setNewBoardName('');
+      setSelectedTemplate(BOARD_TEMPLATES[0]);
       setIsCreateOpen(false);
     }
   };
@@ -137,11 +141,11 @@ export const BoardList = () => {
               key={board.id}
               interactive
               hover
-              onClick={() => setActiveBoard(board.id)}
+              onClick={() => selectBoard(board.id)}
               style={{
                 padding: spacing[4],
-                backgroundColor: activeBoard === board.id ? colors.primary[50] : colors.white,
-                borderColor: activeBoard === board.id ? colors.primary[200] : colors.gray[200],
+                backgroundColor: currentBoardId === board.id ? colors.primary[50] : colors.white,
+                borderColor: currentBoardId === board.id ? colors.primary[200] : colors.gray[200],
                 cursor: 'pointer',
               }}
             >
@@ -149,8 +153,8 @@ export const BoardList = () => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <StyledText 
                     size="base" 
-                    weight={activeBoard === board.id ? 'semibold' : 'medium'}
-                    color={activeBoard === board.id ? colors.primary[800] : colors.gray[800]}
+                    weight={currentBoardId === board.id ? 'semibold' : 'medium'}
+                    color={currentBoardId === board.id ? colors.primary[800] : colors.gray[800]}
                     style={{ marginBottom: spacing[1] }}
                   >
                     {board.name}
@@ -159,7 +163,7 @@ export const BoardList = () => {
                     <StyledBadge variant="default" size="sm">
                       {board.elements.length} elements
                     </StyledBadge>
-                    {activeBoard === board.id && (
+                    {currentBoardId === board.id && (
                       <StyledBadge variant="success" size="sm">
                         Active
                       </StyledBadge>
@@ -218,14 +222,55 @@ export const BoardList = () => {
           </div>
         }
       >
-        <StyledInput
-          label="Board Name"
-          placeholder="Enter board name..."
-          value={newBoardName}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setNewBoardName(e.target.value)}
-          onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreateBoard()}
-          autoFocus
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing[4] }}>
+          <StyledInput
+            label="Board Name"
+            placeholder="Enter board name..."
+            value={newBoardName}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setNewBoardName(e.target.value)}
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreateBoard()}
+            autoFocus
+          />
+          
+          <div>
+            <StyledText 
+              size="sm" 
+              weight="medium" 
+              color={colors.gray[700]} 
+              style={{ marginBottom: spacing[3] }}
+            >
+              Choose a template:
+            </StyledText>
+            
+            <div 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', 
+                gap: spacing[3],
+                maxHeight: '200px',
+                overflowY: 'auto',
+              }}
+            >
+              {BOARD_TEMPLATES.map((template) => (
+                <div key={template.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing[2] }}>
+                  <TemplatePreview
+                    template={template}
+                    size="medium"
+                    selected={selectedTemplate.id === template.id}
+                    onClick={() => setSelectedTemplate(template)}
+                  />
+                  <StyledText 
+                    size="xs" 
+                    color={colors.gray[600]}
+                    style={{ textAlign: 'center', maxWidth: '80px' }}
+                  >
+                    {template.name}
+                  </StyledText>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </StyledModal>
 
       {/* Edit board modal */}

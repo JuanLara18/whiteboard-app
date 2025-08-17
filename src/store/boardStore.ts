@@ -2,13 +2,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { saveBoard, deleteBoard as deleteFromDB, getAllBoards } from '../services/storage/dbService';
+import { getDefaultTemplate } from '../constants/boardTemplates';
 
 export interface Board {
   id: string;
   name: string;
   elements: Array<StickyNote | DrawingElement | TextElement>;
+  template: BoardTemplate;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface BoardTemplate {
+  id: string;
+  name: string;
+  background: {
+    type: 'solid' | 'grid' | 'dots' | 'lines';
+    color: string;
+    gridSize?: number;
+    gridColor?: string;
+    opacity?: number;
+  };
 }
 
 export interface StickyNote {
@@ -49,7 +63,7 @@ interface BoardStore {
   boards: Board[];
   currentBoardId: string | null;
   loadBoards: () => Promise<void>;
-  createBoard: (name: string) => void;
+  createBoard: (name: string, template?: BoardTemplate) => void;
   selectBoard: (id: string) => void;
   updateBoard: (id: string, updates: Partial<Board>) => void;
   deleteBoard: (id: string) => void;
@@ -103,11 +117,12 @@ export const useBoardStore = (create as any)(
         set({ activeBoard: boardId, selectedElements: [] });
       },
       
-  createBoard: async (name: string) => {
+  createBoard: async (name: string, template?: BoardTemplate) => {
         const newBoard: Board = {
           id: `board_${Date.now()}`,
           name,
           elements: [],
+          template: template || getDefaultTemplate(),
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };

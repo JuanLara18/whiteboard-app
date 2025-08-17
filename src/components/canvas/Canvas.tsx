@@ -4,6 +4,7 @@ import { Stage, Layer } from 'react-konva';
 import { useBoardStore, Board, BoardElement } from '../../store/boardStore';
 import { StickyNote } from '../notes/StickyNote';
 import { designSystem } from '../../styles/design-system';
+import { CanvasBackground, getCanvasBackgroundStyle } from './CanvasBackground';
 
 interface CanvasProps {
   board: Board;
@@ -124,11 +125,11 @@ export const Canvas = ({ board }: CanvasProps) => {
   const canvasContainerStyle: React.CSSProperties = {
     width: '100%',
     height: '100%',
-    backgroundColor: 'white',
     borderRadius: designSystem.borderRadius.md,
     boxShadow: designSystem.shadows.sm,
     overflow: 'hidden',
     position: 'relative',
+    ...getCanvasBackgroundStyle(board.template),
   };
   
   return (
@@ -147,6 +148,12 @@ export const Canvas = ({ board }: CanvasProps) => {
         y={position.y}
       >
         <Layer>
+          {/* Background layer */}
+          <CanvasBackground
+            template={board.template}
+            width={stageSize.width / scale}
+            height={stageSize.height / scale}
+          />
           {/* Render sticky notes */}
           {stickyNotes.map((note) => (
             <Fragment key={note.id}>
