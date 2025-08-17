@@ -1,51 +1,44 @@
 // src/services/storage/dbService.ts
-import Dexie from 'dexie';
+// Storage service using localStorage to avoid external DB dependencies.
 import type { Board } from '../../store/boardStore';
 
-export class WhiteboardDatabase extends Dexie {
-  boards: Dexie.Table<Board, string>;
+const BOARDS_KEY = 'whiteboard.boards';
 
-  constructor() {
-    super('WhiteboardDB');
-    this.version(1).stores({
-      boards: 'id, name, createdAt, updatedAt',
-    });
-    this.boards = this.table('boards');
-  }
-}
-
-export const db = new WhiteboardDatabase();
-
-export const saveBoard = async (board: Board): Promise<void> => {
+const readAll = (): Board[] => {
   try {
-    await db.boards.put(board);
-  } catch (error) {
-    console.error('Error saving board:', error);
-  }
-};
-
-export const getBoard = async (id: string): Promise<Board | undefined> => {
-  try {
-    return await db.boards.get(id);
-  } catch (error) {
-    console.error('Error fetching board:', error);
-    return undefined;
-  }
-};
-
-export const getAllBoards = async (): Promise<Board[]> => {
-  try {
-    return await db.boards.toArray();
-  } catch (error) {
-    console.error('Error fetching all boards:', error);
+    const raw = localStorage.getItem(BOARDS_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw) as Board[];
+    return Array.isArray(data) ? data : [];
+  } catch {
     return [];
   }
 };
 
-export const deleteBoard = async (id: string): Promise<void> => {
+const writeAll = (boards: Board[]) => {
   try {
-    await db.boards.delete(id);
+    localStorage.setItem(BOARDS_KEY, JSON.stringify(boards));
   } catch (error) {
-    console.error('Error deleting board:', error);
+    console.error('Error writing boards:', error);
   }
+};
+
+export const saveBoard = async (board: Board): Promise<void> => {
+  const boards = readAll();
+  const idx = boards.findIndex(b => b.id === board.id);
+  if (idx >= 0) boards[idx] = board; else boards.push(board);
+  writeAll(boards);
+};
+
+export const getBoard = async (id: string): Promise<Board | undefined> => {
+  return readAll().find(b => b.id === id);
+};
+
+export const getAllBoards = async (): Promise<Board[]> => {
+  return readAll();
+};
+
+export const deleteBoard = async (id: string): Promise<void> => {
+  const boards = readAll().filter(b => b.id !== id);
+  writeAll(boards);
 };
